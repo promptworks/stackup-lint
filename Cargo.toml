@@ -1,0 +1,20 @@
+[package]
+name = "stackup-lint-cli"
+version = "0.1.0"
+authors = ["stevesweetney <stevesweetney@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+stackup-lint = { path = "stackup-lint" }
+
+[dependencies.clap]
+version = "2.33.0"
+default-features = false
+features = ["suggestions"]
+
+[workspace]
+members = [
+    "stackup-lint"
+]
