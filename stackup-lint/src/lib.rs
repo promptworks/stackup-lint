@@ -8,6 +8,9 @@ use lazy_static::lazy_static;
 use std::collections::HashSet;
 use std::error::Error;
 
+mod interface;
+use interface::*;
+
 type Result<T> = ::std::result::Result<T, Box<dyn Error>>;
 
 lazy_static! {
