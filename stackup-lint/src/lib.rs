@@ -78,8 +78,8 @@ fn check_id_fields(position: Pos, name: &str, id_fields: &[&Field]) -> Option<Po
         1 => {
             let id_field = id_fields.first().unwrap();
             let make_comment = || {
-                let message = format!(r#"{} - Consider making this "id: ID!""#, position);
-                let comment = Comment::new(Severity::Warning, message);
+                let message = r#"Consider making this "id: ID!""#;
+                let comment = Comment::new(Severity::Warning, message.to_string());
                 PositionedComment::new(position, comment)
             };
             match id_field.field_type {
@@ -115,8 +115,8 @@ fn check_fields_for_id(fields: &[&Field]) -> Vec<PositionedComment> {
         .iter()
         .filter_map(|f| {
             let make_comment = || {
-                let message = format!(r#"{} - Consider making this "id: ID!""#, f.position);
-                let comment = Comment::new(Severity::Warning, message);
+                let message = r#"Consider making this "id: ID!""#;
+                let comment = Comment::new(Severity::Warning, message.to_string());
                 PositionedComment::new(f.position, comment)
             };
             match f.field_type {

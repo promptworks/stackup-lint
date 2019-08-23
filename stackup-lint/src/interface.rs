@@ -77,9 +77,6 @@ impl fmt::Display for CheckResult {
 
 impl CheckResult {
     pub fn new(schema: String, comments: Vec<PositionedComment>) -> Self {
-        Self {
-            schema,
-            comments,
-        }
+        Self { schema, comments }
     }
 }
