@@ -29,17 +29,20 @@ lazy_static! {
     };
 }
 
-pub fn check(schema: &str) -> Result<()> {
+pub fn check(schema: &str) -> Result<CheckResult> {
     let document =
         graphql_parser::parse_schema(schema).map_err(|_| "could not parse schema".to_string())?;
-    for defn in document.definitions {
-        has_id(defn);
-    }
+    let comments: Vec<_> = document
+        .definitions
+        .into_iter()
+        .filter_map(has_id)
+        .flatten()
+        .collect();
 
-    Ok(())
+    Ok(CheckResult::new(schema.to_string(), comments))
 }
 
-fn has_id(defn: Definition) {
+fn has_id(defn: Definition) -> Option<Vec<PositionedComment>> {
     if let Definition::TypeDefinition(TypeDefinition::Object(ObjectType {
         fields,
         name,
@@ -49,64 +52,88 @@ fn has_id(defn: Definition) {
     {
         let (id_fields, other_fields): (Vec<_>, Vec<_>) =
             fields.iter().partition(|f| f.name == "id");
-        check_id_fields(position, &name, &id_fields);
-        check_fields_for_id(&other_fields);
+        let mut c = check_id_fields(position, &name, &id_fields);
+        let mut comments = check_fields_for_id(&other_fields);
+
+        if let Some(comment) = c.take() {
+            comments.push(comment);
+        }
+
+        Some(comments)
+    } else {
+        None
     }
 }
 
-fn check_id_fields(position: Pos, name: &str, id_fields: &[&Field]) {
+fn check_id_fields(position: Pos, name: &str, id_fields: &[&Field]) -> Option<PositionedComment> {
     match id_fields.len() {
         0 => {
-            println!(
-                "{} Missing id field on object type {}, consider adding one",
-                position, name
+            let message = format!(
+                "Missing id field on object type {}, consider adding one",
+                name
             );
+            let comment = Comment::new(Severity::Error, message);
+            Some(PositionedComment::new(position, comment))
         }
         1 => {
             let id_field = id_fields.first().unwrap();
-            let print_suggestion = || {
-                println!(
-                    r#"{} - Consider making this "{}: ID!""#,
-                    id_field.position, id_field.name
-                );
+            let make_comment = || {
+                let message = format!(r#"{} - Consider making this "id: ID!""#, position);
+                let comment = Comment::new(Severity::Warning, message);
+                PositionedComment::new(position, comment)
             };
             match id_field.field_type {
-                Type::NamedType(ref type_name) if type_name == "ID" => print_suggestion(),
-                Type::ListType(_) => print_suggestion(),
+                Type::NamedType(ref type_name) if type_name == "ID" => Some(make_comment()),
+                Type::ListType(_) => Some(make_comment()),
                 Type::NonNullType(ref inner_type) => {
                     if let Type::NamedType(ref id) = **inner_type {
                         if id != "ID" {
-                            print_suggestion();
+                            Some(make_comment())
+                        } else {
+                            None
                         }
+                    } else {
+                        None
                     }
                 }
-                _ => print_suggestion(),
+                _ => Some(make_comment()),
             }
         }
         _ => {
-            println!(
+            let message = format!(
                 "{} multiple fields with the same name on object type {}",
                 position, name
             );
+            let comment = Comment::new(Severity::Error, message);
+            Some(PositionedComment::new(position, comment))
         }
     }
 }
 
-fn check_fields_for_id(fields: &[&Field]) {
-    for f in fields {
-        let print_suggestion = || {
-            println!(r#"{} - Consider making this "id: ID!""#, f.position);
-        };
-        match f.field_type {
-            Type::NamedType(ref type_name) if type_name == "ID" => print_suggestion(),
-            Type::NonNullType(ref inner_type) => {
-                if let Type::NamedType(ref id) = **inner_type {
-                    if id == "ID" {
-                        print_suggestion();
+fn check_fields_for_id(fields: &[&Field]) -> Vec<PositionedComment> {
+    fields
+        .iter()
+        .filter_map(|f| {
+            let make_comment = || {
+                let message = format!(r#"{} - Consider making this "id: ID!""#, f.position);
+                let comment = Comment::new(Severity::Warning, message);
+                PositionedComment::new(f.position, comment)
+            };
+            match f.field_type {
+                Type::NamedType(ref type_name) if type_name == "ID" => Some(make_comment()),
+                Type::NonNullType(ref inner_type) => {
+                    if let Type::NamedType(ref id) = **inner_type {
+                        if id == "ID" {
+                            Some(make_comment())
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
                     }
                 }
+                _ => None,
             }
-            _ => (),
-        }
-    }
+        })
+        .collect()
 }
