@@ -32,12 +32,13 @@ lazy_static! {
 pub fn check(schema: &str) -> Result<CheckResult> {
     let document =
         graphql_parser::parse_schema(schema).map_err(|_| "could not parse schema".to_string())?;
-    let comments: Vec<_> = document
-        .definitions
-        .into_iter()
-        .filter_map(has_id)
-        .flatten()
-        .collect();
+
+    let defns = document.definitions;
+
+    let mut comments = Vec::new();
+
+    comments.append(&mut check_associations(&defns));
+    comments.extend(defns.into_iter().filter_map(has_id).flatten());
 
     Ok(CheckResult::new(schema.to_string(), comments))
 }
@@ -134,6 +135,43 @@ fn check_fields_for_id(fields: &[&Field]) -> Vec<PositionedComment> {
                 }
                 _ => None,
             }
+        })
+        .collect()
+}
+
+fn check_associations(defns: &[Definition]) -> Vec<PositionedComment> {
+    let object_defns: Vec<_> = defns
+        .iter()
+        .filter_map(|defn| match defn {
+            Definition::TypeDefinition(TypeDefinition::Object(ObjectType {
+                fields,
+                name,
+                position,
+                ..
+            })) => Some((fields, name, position)),
+            _ => None,
+        })
+        .collect();
+    let names: HashSet<_> = object_defns.iter().map(|(_, name, _)| *name).collect();
+    object_defns
+        .into_iter()
+        .flat_map(|(fields, name, position)| fields.iter().map(move |f| (f, name, position)))
+        .filter(|(f, _, _)| match f.field_type {
+            Type::NamedType(ref type_name) if names.contains(type_name) => true,
+            Type::NonNullType(ref inner_type) => {
+                if let Type::NamedType(ref type_name) = **inner_type {
+                    names.contains(type_name)
+                } else {
+                    false
+                }
+            }
+            _ => false,
+        })
+        .filter(|(f, _, _)| !f.directives.iter().any(|d| &d.name == "belongsTo"))
+        .map(|(f, _, _)| {
+            let message = r#"Missing "@belongsTo" directive"#;
+            let comment = Comment::new(Severity::Error, message.to_string());
+            PositionedComment::new(f.position, comment)
         })
         .collect()
 }
