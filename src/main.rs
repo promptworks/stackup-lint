@@ -15,8 +15,11 @@ fn main() {
     let matches = app.get_matches();
 
     if let Some(path) = matches.value_of("INPUT") {
-        if let Err(e) = try_read_contents(path).and_then(|s| stackup_lint::check(&s)) {
-            eprintln!("{}", e);
+        match try_read_contents(path).and_then(|s| stackup_lint::check(&s)) {
+            Ok(check_result) => {
+                println!("{}", check_result);
+            }
+            Err(e) => eprintln!("{}", e),
         }
     }
 }

@@ -61,6 +61,20 @@ pub struct CheckResult {
     comments: Vec<PositionedComment>,
 }
 
+impl fmt::Display for CheckResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.comments.is_empty() {
+            write!(f, "")
+        } else {
+            let mut message = String::new();
+            for c in &self.comments {
+                message.push_str(&format!("{}\n", c));
+            }
+            write!(f, "{}", message)
+        }
+    }
+}
+
 impl CheckResult {
     pub fn new(schema: String, comments: Vec<PositionedComment>) -> Self {
         Self {
