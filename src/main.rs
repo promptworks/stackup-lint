@@ -3,7 +3,7 @@ use stackup_lint;
 use std::error::Error;
 use std::ffi::OsStr;
 use std::fs::File;
-use std::io::Read;
+use std::io::{self, Read};
 use std::path::Path;
 
 type Result<T> = ::std::result::Result<T, Box<dyn Error>>;
@@ -14,13 +14,19 @@ fn main() {
     let app = app();
     let matches = app.get_matches();
 
-    if let Some(path) = matches.value_of("INPUT") {
-        match try_read_contents(path).and_then(|s| stackup_lint::check(&s)) {
-            Ok(check_result) => {
-                println!("{}", check_result);
-            }
-            Err(e) => eprintln!("{}", e),
+    match matches.value_of("INPUT") {
+        Some("-") => try_checking(try_read_stdin()),
+        Some(path) => try_checking(try_read_contents(path)),
+        _ => (),
+    }
+}
+
+fn try_checking(r: Result<String>) {
+    match r.and_then(|s| stackup_lint::check(&s)) {
+        Ok(check_result) => {
+            println!("{}", check_result);
         }
+        Err(e) => eprintln!("{}", e),
     }
 }
 
@@ -35,6 +41,13 @@ fn try_read_contents<P: AsRef<Path>>(path: P) -> Result<String> {
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
 
+    Ok(contents)
+}
+
+fn try_read_stdin() -> Result<String> {
+    let mut contents = String::new();
+
+    io::stdin().read_to_string(&mut contents)?;
     Ok(contents)
 }
 
