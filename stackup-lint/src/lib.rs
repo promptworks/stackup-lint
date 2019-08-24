@@ -30,8 +30,7 @@ lazy_static! {
 }
 
 pub fn check(schema: &str) -> Result<CheckResult> {
-    let document =
-        graphql_parser::parse_schema(schema).map_err(|_| "could not parse schema".to_string())?;
+    let document = graphql_parser::parse_schema(schema).map_err(|e| e.to_string())?;
 
     let defns = document.definitions;
 
