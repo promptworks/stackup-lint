@@ -6,63 +6,35 @@ use graphql_parser::{
     Pos,
 };
 
-pub(crate) fn has_id(defn: Definition) -> Option<Vec<PositionedComment>> {
-    if let Definition::TypeDefinition(TypeDefinition::Object(ObjectType {
-        fields,
-        name,
-        position,
-        ..
-    })) = defn
-    {
-        let (id_fields, other_fields): (Vec<_>, Vec<_>) =
-            fields.iter().partition(|f| f.name == "id");
-        let mut c = check_id_fields(position, &name, &id_fields);
-        let mut comments = check_fields_for_id(&other_fields);
-
-        if let Some(comment) = c.take() {
-            comments.push(comment);
-        }
-
-        Some(comments)
-    } else {
-        None
-    }
-}
-
-fn check_fields_for_id(fields: &[&Field]) -> Vec<PositionedComment> {
-    fields
+pub(crate) fn check_types_for_id_field(defns: &[Definition]) -> Vec<PositionedComment> {
+    defns
         .iter()
-        .filter_map(|f| {
-            let make_comment = || {
-                let message = r#"Consider making this "id: ID!""#;
-                let comment = Comment::new(Severity::Warning, message.to_string());
-                PositionedComment::new(f.position, comment)
-            };
-            match f.field_type {
-                Type::NamedType(ref type_name) if type_name == "ID" => Some(make_comment()),
-                Type::NonNullType(ref inner_type) => {
-                    if let Type::NamedType(ref id) = **inner_type {
-                        if id == "ID" {
-                            Some(make_comment())
-                        } else {
-                            None
-                        }
-                    } else {
-                        None
-                    }
-                }
-                _ => None,
-            }
+        .filter_map(|defn| match defn {
+            Definition::TypeDefinition(TypeDefinition::Object(ObjectType {
+                fields,
+                name,
+                position,
+                ..
+            })) => Some((fields, name, position)),
+            _ => None,
+        })
+        .flat_map(|(fields, object_name, position)| {
+            let id_fields: Vec<_> = fields.iter().filter(|f| f.name == "id").collect();
+            check_id_fields(*position, &object_name, &id_fields)
         })
         .collect()
 }
 
-fn check_id_fields(position: Pos, name: &str, id_fields: &[&Field]) -> Option<PositionedComment> {
+fn check_id_fields(
+    position: Pos,
+    object_name: &str,
+    id_fields: &[&Field],
+) -> Option<PositionedComment> {
     match id_fields.len() {
         0 => {
             let message = format!(
                 "Missing id field on object type {}, consider adding one",
-                name
+                object_name
             );
             let comment = Comment::new(Severity::Error, message);
             Some(PositionedComment::new(position, comment))
@@ -94,7 +66,7 @@ fn check_id_fields(position: Pos, name: &str, id_fields: &[&Field]) -> Option<Po
         _ => {
             let message = format!(
                 "{} multiple fields with the same name on object type {}",
-                position, name
+                position, object_name
             );
             let comment = Comment::new(Severity::Error, message);
             Some(PositionedComment::new(position, comment))

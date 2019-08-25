@@ -6,7 +6,7 @@ use std::error::Error;
 mod interface;
 mod rules;
 use interface::CheckResult;
-use rules::{associations::check_associations, id::has_id};
+use rules::{associations::check_associations, id::check_types_for_id_field};
 
 type Result<T> = ::std::result::Result<T, Box<dyn Error>>;
 
@@ -34,7 +34,7 @@ pub fn check(schema: &str) -> Result<CheckResult> {
     let mut comments = Vec::new();
 
     comments.append(&mut check_associations(&defns));
-    comments.extend(defns.into_iter().filter_map(has_id).flatten());
+    comments.append(&mut check_types_for_id_field(&defns));
 
     Ok(CheckResult::new(schema.to_string(), comments))
 }
