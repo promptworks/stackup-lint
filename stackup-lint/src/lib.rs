@@ -151,21 +151,34 @@ fn check_associations(defns: &[Definition]) -> Vec<PositionedComment> {
             _ => None,
         })
         .collect();
-    let names: HashSet<_> = object_defns.iter().map(|(_, name, _)| *name).collect();
-    object_defns
+    let object_names: HashSet<_> = object_defns.iter().map(|(_, name, _)| *name).collect();
+
+    let fields_with_associations = object_defns
         .into_iter()
-        .flat_map(|(fields, name, position)| fields.iter().map(move |f| (f, name, position)))
+        .flat_map(|(fields, object_name, position)| {
+            fields.iter().map(move |f| (f, object_name, position))
+        })
         .filter(|(f, _, _)| match f.field_type {
-            Type::NamedType(ref type_name) if names.contains(type_name) => true,
+            Type::NamedType(ref type_name) if object_names.contains(type_name) => true,
             Type::NonNullType(ref inner_type) => {
                 if let Type::NamedType(ref type_name) = **inner_type {
-                    names.contains(type_name)
+                    object_names.contains(type_name)
                 } else {
                     false
                 }
             }
             _ => false,
-        })
+        });
+
+    check_belongs_to(fields_with_associations.clone())
+}
+
+fn check_belongs_to<'a, I>(fields_with_associations: I) -> Vec<PositionedComment>
+where
+    I: IntoIterator<Item = (&'a Field, &'a String, &'a Pos)>,
+{
+    fields_with_associations
+        .into_iter()
         .filter(|(f, _, _)| !f.directives.iter().any(|d| &d.name == "belongsTo"))
         .map(|(f, _, _)| {
             let message = r#"Missing "@belongsTo" directive"#;
