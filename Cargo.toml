@@ -14,6 +14,10 @@ version = "2.33.0"
 default-features = false
 features = ["suggestions"]
 
+[[bin]]
+name = "stackup-lint"
+path = "src/main.rs"
+
 [workspace]
 members = [
     "stackup-lint"
