@@ -36,3 +36,39 @@ fn extract_field_list_type_name(field_type: &Type, inside_list: bool) -> Option<
         Type::NonNullType(inner_type) => extract_field_list_type_name(inner_type, inside_list),
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_extract_field_list_type_name() {
+        let type_1 = Type::NamedType("String".to_string());
+        let type_2 = Type::NonNullType(Box::new(type_1.clone()));
+        let type_3 = Type::ListType(Box::new(type_1.clone()));
+        let type_4 = Type::NonNullType(Box::new(type_3.clone()));
+        let type_5 = Type::ListType(Box::new(Type::NonNullType(Box::new(Type::NamedType(
+            "ID".to_string(),
+        )))));
+        let type_6 = Type::NonNullType(Box::new(type_5.clone()));
+
+        assert!(extract_field_list_type_name(&type_1, false).is_none());
+        assert!(extract_field_list_type_name(&type_2, false).is_none());
+        assert_eq!(
+            extract_field_list_type_name(&type_3, false),
+            Some(&"String".to_string())
+        );
+        assert_eq!(
+            extract_field_list_type_name(&type_4, false),
+            Some(&"String".to_string())
+        );
+        assert_eq!(
+            extract_field_list_type_name(&type_5, false),
+            Some(&"ID".to_string())
+        );
+        assert_eq!(
+            extract_field_list_type_name(&type_6, false),
+            Some(&"ID".to_string())
+        );
+    }
+}
