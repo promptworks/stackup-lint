@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use std::collections::HashSet;
 use std::error::Error;
 
-mod interface;
+pub mod interface;
 mod rules;
 use interface::CheckResult;
 use rules::{

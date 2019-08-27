@@ -1,7 +1,7 @@
-use graphql_parser::Pos;
+pub use graphql_parser::Pos;
 use std::fmt;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Severity {
     Warning,
     Error,
@@ -16,7 +16,7 @@ impl fmt::Display for Severity {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Comment {
     pub severity: Severity,
     pub message: String,
@@ -28,7 +28,7 @@ impl Comment {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PositionedComment {
     start_pos: Pos,
     end_pos: Pos,
@@ -55,7 +55,7 @@ impl fmt::Display for PositionedComment {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct CheckResult {
     schema: String,
     comments: Vec<PositionedComment>,

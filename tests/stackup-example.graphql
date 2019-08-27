@@ -1,0 +1,34 @@
+type User @authenticate {
+  id: ID!
+  email: String! @unique
+}
+
+enum Genre {
+  FICTION
+  NONFICTION
+}
+
+type Book {
+  id: ID!
+  title: String!
+  genre: Genre! @column(default: "NONFICTION")
+  author: Author! @belongsTo
+}
+
+type Author {
+  id: ID!
+  name: String!
+  books: [Book!]!
+}
+
+type Widget {
+  id: ID!
+  string: String!
+  date: Date!
+  datetime: DateTime!
+  integer: Int!
+  float: Float!
+  decimal: Decimal! @column(precision: 10, scale: 2)
+  boolean: Boolean!
+  image: File!
+}

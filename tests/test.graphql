@@ -1,0 +1,17 @@
+type Foo { # Missing id field
+    name: String! 
+}
+
+type Bar { # missing 'quxs' field
+    id: ID!
+    emails: [String!] # list of scalars 
+}
+
+type Qux {
+    id: ID!
+    bar: Bar! # Missing belongsTo directive
+}
+
+type Box {
+    id: String! # should have type 'ID!'
+}
