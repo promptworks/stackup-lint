@@ -6,12 +6,15 @@ use std::error::Error;
 mod interface;
 mod rules;
 use interface::CheckResult;
-use rules::{associations::check_associations, id::check_types_for_id_field};
+use rules::{
+    associations::check_associations, id::check_types_for_id_field,
+    list_of_scalars::check_for_list_of_scalars,
+};
 
 type Result<T> = ::std::result::Result<T, Box<dyn Error>>;
 
 lazy_static! {
-    static ref SCALARS: HashSet<String> = {
+    pub(crate) static ref SCALARS: HashSet<String> = {
         let mut ss = HashSet::new();
         ss.insert("ID".to_string());
         ss.insert("Boolean".to_string());
@@ -35,6 +38,7 @@ pub fn check(schema: &str) -> Result<CheckResult> {
 
     comments.append(&mut check_associations(&defns));
     comments.append(&mut check_types_for_id_field(&defns));
+    comments.append(&mut check_for_list_of_scalars(&defns));
 
     Ok(CheckResult::new(schema.to_string(), comments))
 }

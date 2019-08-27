@@ -5,6 +5,7 @@ use graphql_parser::{
 
 pub mod associations;
 pub mod id;
+pub mod list_of_scalars;
 
 /// This is a wrapper around the Definition
 /// enum from graphql_parser
