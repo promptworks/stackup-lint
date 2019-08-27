@@ -1,7 +1,10 @@
 pub use graphql_parser::Pos;
+use serde::Serialize;
+use serde_json;
+use std::convert::From;
 use std::fmt;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub enum Severity {
     Warning,
     Error,
@@ -16,7 +19,7 @@ impl fmt::Display for Severity {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct Comment {
     pub severity: Severity,
     pub message: String,
@@ -28,10 +31,13 @@ impl Comment {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct PositionedComment {
+    #[serde(with = "json::PosDef")]
     start_pos: Pos,
+    #[serde(with = "json::PosDef")]
     end_pos: Pos,
+    #[serde(flatten)]
     comment: Comment,
 }
 
@@ -78,5 +84,40 @@ impl fmt::Display for CheckResult {
 impl CheckResult {
     pub fn new(schema: String, comments: Vec<PositionedComment>) -> Self {
         Self { schema, comments }
+    }
+
+    pub fn to_json(&self) -> crate::Result<String> {
+        serde_json::to_string(&self.comments).map_err(|e| e.into())
+    }
+}
+
+pub enum Format {
+    TTY,
+    JSON,
+}
+
+impl From<&str> for Format {
+    fn from(s: &str) -> Self {
+        match s {
+            "json" => Format::JSON,
+            _ => Format::TTY, // fallback to tty
+        }
+    }
+}
+
+impl Default for Format {
+    fn default() -> Self {
+        Format::TTY
+    }
+}
+
+mod json {
+    use super::*;
+
+    #[derive(Serialize)]
+    #[serde(remote = "Pos")]
+    pub struct PosDef {
+        pub line: usize,
+        pub column: usize,
     }
 }

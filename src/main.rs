@@ -1,5 +1,5 @@
 use clap::{crate_authors, crate_version, App, Arg};
-use stackup_lint;
+use stackup_lint::{self, interface::Format};
 use std::error::Error;
 use std::ffi::OsStr;
 use std::fs::File;
@@ -14,18 +14,29 @@ fn main() {
     let app = app();
     let matches = app.get_matches();
 
+    let format = matches
+        .value_of("format")
+        .map(Format::from)
+        .unwrap_or_default();
+
     match matches.value_of("INPUT") {
-        Some("-") => try_checking(try_read_stdin()),
-        Some(path) => try_checking(try_read_contents(path)),
+        Some("-") => try_checking(try_read_stdin(), format),
+        Some(path) => try_checking(try_read_contents(path), format),
         _ => (),
     }
 }
 
-fn try_checking(r: Result<String>) {
+fn try_checking(r: Result<String>, format: Format) {
     match r.and_then(|s| stackup_lint::check(&s)) {
-        Ok(check_result) => {
-            println!("{}", check_result);
-        }
+        Ok(check_result) => match format {
+            Format::TTY => println!("{}", check_result),
+            Format::JSON => println!(
+                "{}",
+                check_result
+                    .to_json()
+                    .expect("failed to serialize comments")
+            ),
+        },
         Err(e) => eprintln!("{}", e),
     }
 }
@@ -61,5 +72,14 @@ fn app() -> App<'static, 'static> {
                 .help("Sets the input file to use")
                 .required(true)
                 .index(1),
+        )
+        .arg(
+            Arg::with_name("format")
+                .takes_value(true)
+                .short("f")
+                .long("format")
+                .help("choose the specified format")
+                .default_value("tty")
+                .possible_values(&["tty", "json"]),
         )
 }
