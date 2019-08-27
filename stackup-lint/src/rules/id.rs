@@ -1,26 +1,19 @@
+use super::ObjectDefn;
 use crate::interface::{Comment, PositionedComment, Severity};
 use graphql_parser::{
     self,
     query::Type,
-    schema::{Definition, Field, ObjectType, TypeDefinition},
+    schema::{Definition, Field},
     Pos,
 };
 
 pub(crate) fn check_types_for_id_field(defns: &[Definition]) -> Vec<PositionedComment> {
     defns
         .iter()
-        .filter_map(|defn| match defn {
-            Definition::TypeDefinition(TypeDefinition::Object(ObjectType {
-                fields,
-                name,
-                position,
-                ..
-            })) => Some((fields, name, position)),
-            _ => None,
-        })
-        .flat_map(|(fields, object_name, position)| {
-            let id_fields: Vec<_> = fields.iter().filter(|f| f.name == "id").collect();
-            check_id_fields(*position, &object_name, &id_fields)
+        .filter_map(ObjectDefn::new)
+        .flat_map(|defn| {
+            let id_fields: Vec<_> = defn.fields.iter().filter(|f| f.name == "id").collect();
+            check_id_fields(*defn.position, &defn.name, &id_fields)
         })
         .collect()
 }
