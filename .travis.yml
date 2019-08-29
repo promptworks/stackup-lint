@@ -1,0 +1,58 @@
+language: rust
+sudo: false
+cache:
+  directories:
+    - "/home/travis/.cargo"
+DEPLOY_TO_GITHUB:
+  before_deploy: &2
+    - name="stackup-lint-$TRAVIS_TAG-$TARGET"
+    - tmpdir="$(mktemp -d)"
+    - staging="$tmpdir/$name"
+    - mkdir -p "$staging"
+    - outdir="$(pwd)"
+    - cp "target/$TARGET/release/stackup-lint" "$staging/stackup-lint"
+    - cd "$tmpdir" && tar czvf "$outdir/$name.tar.gz" "$name"
+    - cd "$outdir"
+    - rm -rf "$tmpdir"
+  deploy: &3
+    provider: releases
+    api_key:
+      secure: n9YoRZLzF07ZY2M/aVwo3HOLo2DLE8Yw8TbtHo1lFe0FDG6BorJFKPiL5K1yYW4n80VUA6ZKIbgTT1BtuLJAT5JKMkxdg14/6nFvSu2oSuTWb0gFB5kvQqVmZT+nQqfwv3/zpOcp6c7a0CQah4z+nflQKwnQKjB8/Aw8u75cXzS4sHaxwwdcbiZtVg0tp+fmtA0GBxCnfp1Iuy9x56TXh4Bdv+oq9NR8SwPJPiHqfcR8oaVaFAjD+HzVF9HBwXmfXep91224MFZEvOSnwkEHdFSWi/l7UaWG9Ob/mBo+TCt2OpDyNbBgTAwnrNZ/UJqdSU6MdjCeux3iccIUiEGm0doYjGDSbRG7GPHzht142OIcmS/97OMDO8UAowa3a4+e+3UT00fh00Bij+MF2tgiRFFJL2sHy3BOX6wqbq0XVyedsIPTfIyzzvc2WYCMbY9TEhWdmLG7bG2GIJov5bKLPWA2QMFr2baUPbyw4eMXRBz6pqXVrF551RxrsOhP1C1vWyw2kyrW4dpJM3aYHMwopuMnMIT1iwzU5YSc+RDkTJUXubW8HfBgHA/MI/ttoJw4ugsW6tH+MZLCZsrae/D/MQbzQqFqqoL5F/ZvsK9QoYyrp5ynnhGfPH8Oe1qCDTVCddDGoVTTi3HOOZ3sfp5AYGyyh9UW8vtJlzadsKPnzek=
+    file: "stackup-lint-$TRAVIS_TAG-$TARGET.tar.gz"
+    skip_cleanup: true
+    on:
+      repo: stevesweetney/stackup-lint
+      tags: true
+matrix:
+  include:
+    - name: Tests
+      env: RUST_BACKTRACE=1
+      rust: nightly
+      script:
+        - cargo test --locked --all
+        - rustup component add rustfmt
+        - cargo fmt --version
+        - cargo fmt --all -- --check
+    - name: Linux Binary
+      os: linux
+      env: TARGET=x86_64-unknown-linux-musl
+      rust: stable
+      before_script: rustup target add $TARGET
+      script: cargo build --release --target $TARGET --locked
+      addons:
+        apt:
+          packages:
+            - musl-tools
+      before_deploy: *2
+      deploy: *3
+    - name: macOS Binary
+      env: MACOSX_DEPLOYMENT_TARGET=10.7 TARGET=x86_64-apple-darwin
+      os: osx
+      rust: stable
+      script: cargo build --release --target $TARGET --locked
+      install: true
+      before_deploy: *2
+      deploy: *3
+notifications:
+  email:
+    on_success: never
