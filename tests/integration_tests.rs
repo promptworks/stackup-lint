@@ -64,3 +64,23 @@ fn test_check() {
     ];
     assert_eq!(check_result, CheckResult::new(schema.to_string(), comments));
 }
+
+#[test]
+fn test_check_syntax_error() {
+    let schema = include_str!("./syntax-error.graphql");
+    let check_result = stackup_lint::check(schema);
+
+    let comments = vec![PositionedComment::new(
+        Pos {
+            line: 2,
+            column: 12,
+        },
+        Comment::new(
+            Severity::Error,
+            r"    Unexpected `![Punctuator]`
+                    Expected `}`"
+                .to_string(),
+        ),
+    )];
+    assert_eq!(check_result, CheckResult::new(schema.to_string(), comments));
+}
