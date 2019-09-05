@@ -27,7 +27,7 @@ fn main() {
 }
 
 fn try_checking(r: Result<String>, format: Format) {
-    match r.and_then(|s| stackup_lint::check(&s)) {
+    match r.map(|s| stackup_lint::check(&s)) {
         Ok(check_result) => match format {
             Format::TTY => println!("{}", check_result),
             Format::JSON => println!(

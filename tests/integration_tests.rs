@@ -6,10 +6,8 @@ use stackup_lint::{
 #[test]
 fn test_check_example() {
     let schema = include_str!("./stackup-example.graphql");
-    let result = stackup_lint::check(schema);
-    assert!(result.is_ok());
+    let check_result = stackup_lint::check(schema);
 
-    let check_result = result.unwrap();
     let comments = vec![];
     assert_eq!(check_result, CheckResult::new(schema.to_string(), comments));
 }
@@ -17,10 +15,8 @@ fn test_check_example() {
 #[test]
 fn test_check() {
     let schema = include_str!("./test.graphql");
-    let result = stackup_lint::check(schema);
-    assert!(result.is_ok());
+    let check_result = stackup_lint::check(schema);
 
-    let check_result = result.unwrap();
     let comments = vec![
         PositionedComment::new(
             Pos {
