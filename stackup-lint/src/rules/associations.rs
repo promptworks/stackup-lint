@@ -4,10 +4,20 @@ use graphql_parser::{
     self,
     query::Type,
     schema::{Definition, Field},
-    Pos,
 };
 use heck::MixedCase;
 use std::collections::HashMap;
+
+struct FieldWithAssociation<'a> {
+    field: &'a Field,
+    object_defn: &'a ObjectDefn<'a>,
+}
+
+impl<'a> FieldWithAssociation<'a> {
+    fn new(field: &'a Field, object_defn: &'a ObjectDefn) -> Self {
+        Self { field, object_defn }
+    }
+}
 
 pub(crate) fn check_associations(defns: &[Definition]) -> Vec<PositionedComment> {
     let object_defns: Vec<_> = defns.iter().filter_map(ObjectDefn::new).collect();
@@ -22,9 +32,9 @@ pub(crate) fn check_associations(defns: &[Definition]) -> Vec<PositionedComment>
         .flat_map(|defn| {
             defn.fields
                 .iter()
-                .map(move |f| (f, defn.name, defn.position))
+                .map(move |f| FieldWithAssociation::new(f, &defn))
         })
-        .filter(|(f, _, _)| extract_field_type_name(&object_defns_map, &f).is_some())
+        .filter(|f| extract_field_type_name(&object_defns_map, &f.field).is_some())
         .collect();
 
     let mut comments = Vec::new();
@@ -37,38 +47,33 @@ pub(crate) fn check_associations(defns: &[Definition]) -> Vec<PositionedComment>
     comments
 }
 
-fn check_belongs_to<'a>(
-    fields_with_associations: &[(&'a Field, &'a String, &'a Pos)],
-) -> Vec<PositionedComment> {
+fn check_belongs_to(fields_with_associations: &[FieldWithAssociation]) -> Vec<PositionedComment> {
     fields_with_associations
         .iter()
-        .filter(|(f, _, _)| !f.directives.iter().any(|d| &d.name == "belongsTo"))
-        .map(|(f, _, _)| {
+        .filter(|f| !f.field.directives.iter().any(|d| &d.name == "belongsTo"))
+        .map(|f| {
             let message = r#"Missing "@belongsTo" directive"#;
             let comment = Comment::new(Severity::Error, message.to_string());
-            PositionedComment::new(f.position, comment)
+            PositionedComment::new(f.field.position, comment)
         })
         .collect()
 }
 
 fn check_fields_for_association<'a>(
-    fields_with_associations: &[(&'a Field, &'a String, &'a Pos)],
+    fields_with_associations: &[FieldWithAssociation],
     object_defns: &HashMap<&String, &'a ObjectDefn>,
 ) -> Vec<PositionedComment> {
     fields_with_associations
         .iter()
-        .filter_map(|(field, f_object_name, f_object_pos)| {
-            extract_field_type_name(object_defns, &field).and_then(|f_type_name| {
-                object_defns
-                    .get(f_type_name)
-                    .map(|defn| ((field, *f_object_name, f_object_pos), *defn))
-            })
+        .filter_map(|f| {
+            extract_field_type_name(object_defns, &f.field)
+                .and_then(|f_type_name| object_defns.get(f_type_name).map(|defn| (f, *defn)))
         })
-        .filter_map(|((_, f_object_name, f_object_pos), object_defn)| {
-            let plural_field_name = if f_object_name.ends_with('s') {
-                (f_object_name.clone() + "es").to_mixed_case()
+        .filter_map(|(f, object_defn)| {
+            let plural_field_name = if f.object_defn.name.ends_with('s') {
+                (f.object_defn.name.clone() + "es").to_mixed_case()
             } else {
-                (f_object_name.clone() + "s").to_mixed_case()
+                (f.object_defn.name.clone() + "s").to_mixed_case()
             };
 
             if !object_defn
@@ -78,7 +83,7 @@ fn check_fields_for_association<'a>(
             {
                 let message = format!(
                     r#"Missing field "{}", due to association on object type {} - {}\n"#,
-                    plural_field_name, f_object_name, f_object_pos
+                    plural_field_name, f.object_defn.name, f.object_defn.position
                 );
                 let comment = Comment::new(Severity::Error, message.to_string());
                 Some(PositionedComment::new(*object_defn.position, comment))
