@@ -14,4 +14,10 @@ type Qux {
 
 type Box {
     id: String! # should have type 'ID!'
+    tixs: [Tix!]!
+}
+
+type Tix {
+    id: ID!
+    wax: Box @belongsTo # field name should be 'box'
 }

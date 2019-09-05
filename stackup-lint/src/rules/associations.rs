@@ -10,12 +10,17 @@ use std::collections::HashMap;
 
 struct FieldWithAssociation<'a> {
     field: &'a Field,
+    field_type_name: String,
     object_defn: &'a ObjectDefn<'a>,
 }
 
 impl<'a> FieldWithAssociation<'a> {
-    fn new(field: &'a Field, object_defn: &'a ObjectDefn) -> Self {
-        Self { field, object_defn }
+    fn new(field: &'a Field, field_type_name: String, object_defn: &'a ObjectDefn) -> Self {
+        Self {
+            field,
+            field_type_name,
+            object_defn,
+        }
     }
 }
 
@@ -29,12 +34,11 @@ pub(crate) fn check_associations(defns: &[Definition]) -> Vec<PositionedComment>
 
     let fields_with_associations: Vec<_> = object_defns
         .iter()
-        .flat_map(|defn| {
-            defn.fields
-                .iter()
-                .map(move |f| FieldWithAssociation::new(f, &defn))
+        .flat_map(|defn| defn.fields.iter().map(move |f| (f, defn)))
+        .filter_map(|(f, defn)| {
+            extract_field_type_name(&object_defns_map, &f)
+                .map(|f_type_name| FieldWithAssociation::new(f, f_type_name.to_owned(), defn))
         })
-        .filter(|f| extract_field_type_name(&object_defns_map, &f.field).is_some())
         .collect();
 
     let mut comments = Vec::new();
@@ -43,8 +47,28 @@ pub(crate) fn check_associations(defns: &[Definition]) -> Vec<PositionedComment>
         &fields_with_associations,
         &object_defns_map,
     ));
+    comments.append(&mut check_field_name_against_type_name(
+        &fields_with_associations,
+    ));
 
     comments
+}
+
+fn check_field_name_against_type_name(
+    fields_with_associations: &[FieldWithAssociation],
+) -> Vec<PositionedComment> {
+    fields_with_associations
+        .iter()
+        .filter(|f| f.field_type_name.to_mixed_case() != f.field.name)
+        .map(|f| {
+            let message = format!(
+                r#"Field name should be "{}""#,
+                f.field_type_name.to_mixed_case()
+            );
+            let comment = Comment::new(Severity::Error, message.to_string());
+            PositionedComment::new(f.field.position, comment)
+        })
+        .collect()
 }
 
 fn check_belongs_to(fields_with_associations: &[FieldWithAssociation]) -> Vec<PositionedComment> {

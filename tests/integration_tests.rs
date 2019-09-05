@@ -37,6 +37,13 @@ fn test_check() {
             ),
         ),
         PositionedComment::new(
+            Pos {
+                line: 22,
+                column: 5,
+            },
+            Comment::new(Severity::Error, r#"Field name should be "box""#.to_string()),
+        ),
+        PositionedComment::new(
             Pos { line: 1, column: 1 },
             Comment::new(
                 Severity::Error,
