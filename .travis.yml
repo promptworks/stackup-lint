@@ -27,7 +27,7 @@ matrix:
   include:
     - name: Tests
       env: RUST_BACKTRACE=1
-      rust: nightly
+      rust: stable
       script:
         - cargo test --locked --all
         - rustup component add rustfmt
