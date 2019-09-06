@@ -2,6 +2,10 @@
 
 linter for your stackup schema :mag:
 
+### Installation
+
+[Precompiled binaries are available for linux and macOS](https://github.com/stevesweetney/stackup-lint/releases)
+
 ### Command-line Usage
 
 `stackup-lint <INPUT>`
