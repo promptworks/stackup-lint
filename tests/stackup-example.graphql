@@ -31,4 +31,11 @@ type Widget {
   decimal: Decimal! @column(precision: 10, scale: 2)
   boolean: Boolean!
   image: File!
+  widgetAuthor: WidgetAuthor! @belongsTo
+}
+
+type WidgetAuthor {
+  id: ID!
+  name: String!
+  widgets: [Widget!]!
 }
