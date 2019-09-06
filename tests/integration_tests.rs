@@ -44,6 +44,18 @@ fn test_check() {
             Comment::new(Severity::Error, r#"Field name should be "box""#.to_string()),
         ),
         PositionedComment::new(
+            Pos {
+                line: 27,
+                column: 5,
+            },
+            Comment::new(
+                Severity::Warning,
+                r#"Missing an association on object type "Tix".
+                Try adding a field with a "@belongsTo" directive on "Tix""#
+                    .to_string(),
+            ),
+        ),
+        PositionedComment::new(
             Pos { line: 1, column: 1 },
             Comment::new(
                 Severity::Error,

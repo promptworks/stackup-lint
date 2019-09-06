@@ -1,5 +1,6 @@
 use super::ObjectDefn;
 use crate::interface::{Comment, PositionedComment, Severity};
+use crate::rules::list_of_scalars::extract_field_list_type_name;
 use graphql_parser::{
     self,
     query::Type,
@@ -15,6 +16,22 @@ struct FieldWithAssociation<'a> {
 }
 
 impl<'a> FieldWithAssociation<'a> {
+    fn new(field: &'a Field, field_type_name: String, object_defn: &'a ObjectDefn) -> Self {
+        Self {
+            field,
+            field_type_name,
+            object_defn,
+        }
+    }
+}
+
+struct FieldWithListType<'a> {
+    field: &'a Field,
+    field_type_name: String,
+    object_defn: &'a ObjectDefn<'a>,
+}
+
+impl<'a> FieldWithListType<'a> {
     fn new(field: &'a Field, field_type_name: String, object_defn: &'a ObjectDefn) -> Self {
         Self {
             field,
@@ -41,6 +58,16 @@ pub(crate) fn check_associations(defns: &[Definition]) -> Vec<PositionedComment>
         })
         .collect();
 
+    let fields_with_lists_of_object_types: Vec<_> = object_defns
+        .iter()
+        .flat_map(|defn| defn.fields.iter().map(move |f| (f, defn)))
+        .filter_map(|(f, defn)| {
+            extract_field_list_type_name(&f.field_type, false)
+                .filter(|f_type_name| object_defns_map.contains_key(f_type_name))
+                .map(|f_type_name| FieldWithListType::new(f, f_type_name.to_owned(), defn))
+        })
+        .collect();
+
     let mut comments = Vec::new();
     comments.append(&mut check_belongs_to(&fields_with_associations));
     comments.append(&mut check_fields_for_association(
@@ -49,6 +76,10 @@ pub(crate) fn check_associations(defns: &[Definition]) -> Vec<PositionedComment>
     ));
     comments.append(&mut check_field_name_against_type_name(
         &fields_with_associations,
+    ));
+    comments.append(&mut check_list_of_object_types_without_association(
+        &fields_with_associations,
+        &fields_with_lists_of_object_types,
     ));
 
     comments
@@ -114,6 +145,29 @@ fn check_fields_for_association<'a>(
             } else {
                 None
             }
+        })
+        .collect()
+}
+
+fn check_list_of_object_types_without_association(
+    fields_with_associations: &[FieldWithAssociation],
+    fields_with_lists_of_object_types: &[FieldWithListType],
+) -> Vec<PositionedComment> {
+    fields_with_lists_of_object_types
+        .iter()
+        .filter(|&f_list| {
+            !fields_with_associations
+                .iter()
+                .any(|f_assoc| *f_list.object_defn.name == f_assoc.field_type_name)
+        })
+        .map(|f_list| {
+            let message = format!(
+                r#"Missing an association on object type "{0}".
+                Try adding a field with a "@belongsTo" directive on "{0}""#,
+                f_list.field_type_name
+            );
+            let comment = Comment::new(Severity::Warning, message.to_string());
+            PositionedComment::new(f_list.field.position, comment)
         })
         .collect()
 }

@@ -28,7 +28,10 @@ pub(crate) fn check_for_list_of_scalars(defns: &[Definition]) -> Vec<PositionedC
         .collect()
 }
 
-fn extract_field_list_type_name(field_type: &Type, inside_list: bool) -> Option<&String> {
+pub(crate) fn extract_field_list_type_name(
+    field_type: &Type,
+    inside_list: bool,
+) -> Option<&String> {
     match field_type {
         Type::NamedType(_) if !inside_list => None,
         Type::NamedType(name) => Some(name),

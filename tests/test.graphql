@@ -21,3 +21,8 @@ type Tix {
     id: ID!
     wax: Box @belongsTo # field name should be 'box'
 }
+
+type Tox {
+    id: ID!
+    tixs: [Tix!]! # missing an association field on Tix
+}
