@@ -87,7 +87,7 @@ impl CheckResult {
     }
 
     pub fn to_json(&self) -> crate::Result<String> {
-        serde_json::to_string(&self.comments).map_err(|e| e.into())
+        serde_json::to_string_pretty(&self.comments).map_err(|e| e.into())
     }
 }
 
