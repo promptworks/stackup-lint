@@ -1,4 +1,7 @@
 use combine::error::ParseError;
+use combine::parser::item::satisfy;
+use combine::parser::range::recognize;
+use combine::parser::repeat;
 use combine::stream::{state::SourcePosition, RangeStream};
 use combine::{self, choice, position, token, Parser};
 
@@ -90,4 +93,23 @@ where
             .with(position())
             .map(|pos| Token::new(TokenType::Punctuator(Punctuator::VerticalBar), pos)),
     ))
+}
+
+fn name<'a, I>() -> impl Parser<Input = I, Output = Token<'a>>
+where
+    I: RangeStream<Item = char, Range = &'a str, Position = SourcePosition>,
+    I::Error: ParseError<I::Item, I::Range, I::Position>,
+{
+    let alphanumeric_or_underscore =
+        satisfy(|c: char| c.is_alphanumeric() || c == '_').expected("letter, number or underscore");
+    let alphabetic_or_underscore =
+        satisfy(|c: char| c.is_alphabetic() || c == '_').expected("letter or underscore");
+    (
+        position(),
+        recognize((
+            alphabetic_or_underscore,
+            repeat::skip_many(alphanumeric_or_underscore),
+        )),
+    )
+        .map(|(pos, name)| Token::new(TokenType::Name(name), pos))
 }
