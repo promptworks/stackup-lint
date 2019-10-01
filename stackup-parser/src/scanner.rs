@@ -1,16 +1,17 @@
 use combine::error::ParseError;
+use combine::parser::char::digit;
 use combine::parser::item::satisfy;
-use combine::parser::range::recognize;
+use combine::parser::range::{self, recognize};
 use combine::parser::repeat;
 use combine::stream::{state::SourcePosition, RangeStream};
-use combine::{self, choice, position, token, Parser};
+use combine::{self, choice, optional, position, token, Parser};
 
 #[derive(Debug, Clone, PartialEq)]
 enum TokenType<'a> {
     Punctuator(Punctuator),
     Name(&'a str),
-    IntValue(u32),
-    FloatValue(i32),
+    IntValue(i32),
+    FloatValue(f32),
     StringValue(&'a str),
 }
 
@@ -112,4 +113,34 @@ where
         )),
     )
         .map(|(pos, name)| Token::new(TokenType::Name(name), pos))
+}
+
+fn int_value<'a, I>() -> impl Parser<Input = I, Output = Token<'a>>
+where
+    I: RangeStream<Item = char, Range = &'a str, Position = SourcePosition>,
+    I::Error: ParseError<I::Item, I::Range, I::Position>,
+    I: 'a,
+{
+    (position(), int_part())
+        .map(|(pos, num)| Token::new(TokenType::IntValue(num.parse().unwrap()), pos))
+}
+
+fn int_part<'a, I>() -> impl Parser<Input = I, Output = String> + 'a
+where
+    I: RangeStream<Item = char, Range = &'a str, Position = SourcePosition>,
+    I::Error: ParseError<I::Item, I::Range, I::Position>,
+    I: 'a,
+{
+    let digits = repeat::many::<String, _>(digit());
+    let non_zero_digit = satisfy(|c: char| c.is_digit(10) && c != '0').expected("non-zero digit");
+    (
+        optional(token('-')).map(|sign| sign.unwrap_or('+')),
+        range::range("0").or(recognize((non_zero_digit, digits))),
+    )
+        .map(|(sign, n): (char, &str)| {
+            let mut num = n.to_owned();
+            num.insert(0, sign);
+
+            num
+        })
 }
