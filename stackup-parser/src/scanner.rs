@@ -2,6 +2,7 @@ use combine::error::ParseError;
 use combine::stream::{state::SourcePosition, RangeStream};
 use combine::{self, choice, position, token, Parser};
 
+#[derive(Debug, Clone, PartialEq)]
 enum TokenType<'a> {
     Punctuator(Punctuator),
     Name(&'a str),
@@ -10,6 +11,7 @@ enum TokenType<'a> {
     StringValue(&'a str),
 }
 
+#[derive(Debug, Clone, PartialEq)]
 enum Punctuator {
     Bang,
     DollarSign,
@@ -27,6 +29,7 @@ enum Punctuator {
     VerticalBar,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 struct Token<'a> {
     kind: TokenType<'a>,
     pos: SourcePosition,
