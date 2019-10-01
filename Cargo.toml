@@ -20,5 +20,6 @@ path = "src/main.rs"
 
 [workspace]
 members = [
-    "stackup-lint"
+    "stackup-lint",
+    "stackup-parser"
 ]
