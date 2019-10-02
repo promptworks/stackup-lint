@@ -51,47 +51,47 @@ where
     I::Error: ParseError<I::Item, I::Range, I::Position>,
 {
     choice((
-        combine::char::string("...")
-            .with(position())
+        position()
+            .skip(combine::char::string("..."))
             .map(|pos| Token::new(TokenType::Punctuator(Punctuator::Ellipsis), pos)),
-        token('!')
-            .with(position())
+        position()
+            .skip(token('!'))
             .map(|pos| Token::new(TokenType::Punctuator(Punctuator::Bang), pos)),
-        token('$')
-            .with(position())
+        position()
+            .skip(token('$'))
             .map(|pos| Token::new(TokenType::Punctuator(Punctuator::DollarSign), pos)),
-        token('&')
-            .with(position())
+        position()
+            .skip(token('&'))
             .map(|pos| Token::new(TokenType::Punctuator(Punctuator::Ampersand), pos)),
-        token('(')
-            .with(position())
+        position()
+            .skip(token('('))
             .map(|pos| Token::new(TokenType::Punctuator(Punctuator::LeftParen), pos)),
-        token(')')
-            .with(position())
+        position()
+            .skip(token(')'))
             .map(|pos| Token::new(TokenType::Punctuator(Punctuator::RightParen), pos)),
-        token(':')
-            .with(position())
+        position()
+            .skip(token(':'))
             .map(|pos| Token::new(TokenType::Punctuator(Punctuator::Colon), pos)),
-        token('=')
-            .with(position())
+        position()
+            .skip(token('='))
             .map(|pos| Token::new(TokenType::Punctuator(Punctuator::Equals), pos)),
-        token('@')
-            .with(position())
+        position()
+            .skip(token('@'))
             .map(|pos| Token::new(TokenType::Punctuator(Punctuator::AtSign), pos)),
-        token('[')
-            .with(position())
+        position()
+            .skip(token('['))
             .map(|pos| Token::new(TokenType::Punctuator(Punctuator::LeftSquareBracket), pos)),
-        token(']')
-            .with(position())
+        position()
+            .skip(token(']'))
             .map(|pos| Token::new(TokenType::Punctuator(Punctuator::RightSquareBracket), pos)),
-        token('{')
-            .with(position())
+        position()
+            .skip(token('{'))
             .map(|pos| Token::new(TokenType::Punctuator(Punctuator::LeftCurlyBracket), pos)),
-        token('}')
-            .with(position())
+        position()
+            .skip(token('}'))
             .map(|pos| Token::new(TokenType::Punctuator(Punctuator::RightCurlyBracket), pos)),
-        token('|')
-            .with(position())
+        position()
+            .skip(token('|'))
             .map(|pos| Token::new(TokenType::Punctuator(Punctuator::VerticalBar), pos)),
     ))
 }
@@ -214,25 +214,34 @@ mod test {
     #[test]
     fn test_punctuator() {
         let mut parser = punctuator();
-        let _result_ellipsis = parser.parse(State::new("...")).map(|x| x.0);
-        let _result_bang = parser.parse(State::new("!")).map(|x| x.0);
+        let result_ellipsis = parser.parse(State::new("...")).map(|x| x.0);
+        let result_bang = parser.parse(State::new("!")).map(|x| x.0);
+        let result_v_bar = parser.parse(State::new("|")).map(|x| x.0);
         let result_err = parser.parse(State::new("not a punctuator")).map(|x| x.0);
 
-        // assert_eq!(
-        //     result_ellipsis,
-        //     Ok(Token {
-        //         kind: TokenType::Punctuator(Punctuator::Ellipsis),
-        //         pos: SourcePosition::default()
-        //     })
-        // );
+        assert_eq!(
+            result_ellipsis,
+            Ok(Token {
+                kind: TokenType::Punctuator(Punctuator::Ellipsis),
+                pos: SourcePosition::default()
+            })
+        );
 
-        // assert_eq!(
-        //     result_bang,
-        //     Ok(Token {
-        //         kind: TokenType::Punctuator(Punctuator::Bang),
-        //         pos: SourcePosition::default()
-        //     })
-        // );
+        assert_eq!(
+            result_bang,
+            Ok(Token {
+                kind: TokenType::Punctuator(Punctuator::Bang),
+                pos: SourcePosition::default()
+            })
+        );
+
+        assert_eq!(
+            result_v_bar,
+            Ok(Token {
+                kind: TokenType::Punctuator(Punctuator::VerticalBar),
+                pos: SourcePosition::default()
+            })
+        );
 
         assert!(result_err.is_err());
     }
