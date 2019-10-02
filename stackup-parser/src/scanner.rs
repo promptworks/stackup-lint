@@ -144,3 +144,96 @@ where
             num
         })
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use combine::stream::state::State;
+
+    #[test]
+    fn test_int_value() {
+        let mut parser = int_value();
+        let result = parser.parse(State::new("12345")).map(|x| x.0);
+        let result_0 = parser.parse(State::new("0")).map(|x| x.0);
+        let result_negative = parser.parse(State::new("-12345")).map(|x| x.0);
+        let result_err = parser.parse(State::new("name")).map(|x| x.0);
+
+        assert_eq!(
+            result,
+            Ok(Token {
+                kind: TokenType::IntValue(12345),
+                pos: SourcePosition::default()
+            })
+        );
+
+        assert_eq!(
+            result_0,
+            Ok(Token {
+                kind: TokenType::IntValue(0),
+                pos: SourcePosition::default()
+            })
+        );
+
+        assert_eq!(
+            result_negative,
+            Ok(Token {
+                kind: TokenType::IntValue(-12345),
+                pos: SourcePosition::default()
+            })
+        );
+
+        assert!(result_err.is_err());
+    }
+
+    #[test]
+    fn test_name() {
+        let mut parser = name();
+        let foo_bar_result = parser.parse(State::new("foo_bar")).map(|x| x.0);
+        let foo_bar_camel_result = parser.parse(State::new("fooBar")).map(|x| x.0);
+        let result_err = parser.parse(State::new("0err")).map(|x| x.0);
+
+        assert_eq!(
+            foo_bar_result,
+            Ok(Token {
+                kind: TokenType::Name("foo_bar"),
+                pos: SourcePosition::default()
+            })
+        );
+
+        assert_eq!(
+            foo_bar_camel_result,
+            Ok(Token {
+                kind: TokenType::Name("fooBar"),
+                pos: SourcePosition::default()
+            })
+        );
+
+        assert!(result_err.is_err());
+    }
+
+    #[test]
+    fn test_punctuator() {
+        let mut parser = punctuator();
+        let _result_ellipsis = parser.parse(State::new("...")).map(|x| x.0);
+        let _result_bang = parser.parse(State::new("!")).map(|x| x.0);
+        let result_err = parser.parse(State::new("not a punctuator")).map(|x| x.0);
+
+        // assert_eq!(
+        //     result_ellipsis,
+        //     Ok(Token {
+        //         kind: TokenType::Punctuator(Punctuator::Ellipsis),
+        //         pos: SourcePosition::default()
+        //     })
+        // );
+
+        // assert_eq!(
+        //     result_bang,
+        //     Ok(Token {
+        //         kind: TokenType::Punctuator(Punctuator::Bang),
+        //         pos: SourcePosition::default()
+        //     })
+        // );
+
+        assert!(result_err.is_err());
+    }
+}
