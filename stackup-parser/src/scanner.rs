@@ -119,7 +119,6 @@ fn int_value<'a, I>() -> impl Parser<Input = I, Output = Token<'a>>
 where
     I: RangeStream<Item = char, Range = &'a str, Position = SourcePosition>,
     I::Error: ParseError<I::Item, I::Range, I::Position>,
-    I: 'a,
 {
     (position(), int_part())
         .map(|(pos, num)| Token::new(TokenType::IntValue(num.parse().unwrap()), pos))
@@ -130,10 +129,8 @@ fn float_value<'a, I>() -> impl Parser<Input = I, Output = Token<'a>>
 where
     I: RangeStream<Item = char, Range = &'a str, Position = SourcePosition>,
     I::Error: ParseError<I::Item, I::Range, I::Position>,
-    I: 'a,
 {
-    (position(), int_part(), fractional_part()).map(|(pos, mut num, fraction)| {
-        num += fraction;
+    (position(), recognize(int_part().and(fractional_part()))).map(|(pos, num): (_, &'a str)| {
         Token::new(TokenType::FloatValue(num.parse().unwrap()), pos)
     })
 }
@@ -142,29 +139,22 @@ fn fractional_part<'a, I>() -> impl Parser<Input = I, Output = &'a str>
 where
     I: RangeStream<Item = char, Range = &'a str, Position = SourcePosition>,
     I::Error: ParseError<I::Item, I::Range, I::Position>,
-    I: 'a,
 {
     recognize((token('.'), repeat::skip_many1(digit())))
 }
 
-fn int_part<'a, I>() -> impl Parser<Input = I, Output = String> + 'a
+fn int_part<'a, I>() -> impl Parser<Input = I, Output = &'a str>
 where
     I: RangeStream<Item = char, Range = &'a str, Position = SourcePosition>,
     I::Error: ParseError<I::Item, I::Range, I::Position>,
-    I: 'a,
 {
     let digits = repeat::many::<String, _>(digit());
     let non_zero_digit = satisfy(|c: char| c.is_digit(10) && c != '0').expected("non-zero digit");
-    (
-        optional(token('-').or(token('+'))).map(|sign| sign.unwrap_or('+')),
-        range::range("0").or(recognize((non_zero_digit, digits))),
-    )
-        .map(|(sign, n): (char, &str)| {
-            let mut num = n.to_owned();
-            num.insert(0, sign);
 
-            num
-        })
+    recognize((
+        optional(token('-').or(token('+'))),
+        range::range("0").or(recognize((non_zero_digit, digits))),
+    ))
 }
 
 #[cfg(test)]
