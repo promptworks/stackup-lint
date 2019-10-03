@@ -125,6 +125,28 @@ where
         .map(|(pos, num)| Token::new(TokenType::IntValue(num.parse().unwrap()), pos))
 }
 
+// TODO: Add exponent parts
+fn float_value<'a, I>() -> impl Parser<Input = I, Output = Token<'a>>
+where
+    I: RangeStream<Item = char, Range = &'a str, Position = SourcePosition>,
+    I::Error: ParseError<I::Item, I::Range, I::Position>,
+    I: 'a,
+{
+    (position(), int_part(), fractional_part()).map(|(pos, mut num, fraction)| {
+        num += fraction;
+        Token::new(TokenType::FloatValue(num.parse().unwrap()), pos)
+    })
+}
+
+fn fractional_part<'a, I>() -> impl Parser<Input = I, Output = &'a str>
+where
+    I: RangeStream<Item = char, Range = &'a str, Position = SourcePosition>,
+    I::Error: ParseError<I::Item, I::Range, I::Position>,
+    I: 'a,
+{
+    recognize((token('.'), repeat::skip_many1(digit())))
+}
+
 fn int_part<'a, I>() -> impl Parser<Input = I, Output = String> + 'a
 where
     I: RangeStream<Item = char, Range = &'a str, Position = SourcePosition>,
@@ -178,6 +200,41 @@ mod test {
             result_negative,
             Ok(Token {
                 kind: TokenType::IntValue(-12345),
+                pos: SourcePosition::default()
+            })
+        );
+
+        assert!(result_err.is_err());
+    }
+
+    #[test]
+    fn test_float_value() {
+        let mut parser = float_value();
+        let result = parser.parse(State::new("12345.0")).map(|x| x.0);
+        let result_1 = parser.parse(State::new("-42.5909")).map(|x| x.0);
+        let result_2 = parser.parse(State::new("0.32")).map(|x| x.0);
+        let result_err = parser.parse(State::new("12345.")).map(|x| x.0);
+
+        assert_eq!(
+            result,
+            Ok(Token {
+                kind: TokenType::FloatValue(12345.0),
+                pos: SourcePosition::default()
+            })
+        );
+
+        assert_eq!(
+            result_1,
+            Ok(Token {
+                kind: TokenType::FloatValue(-42.5909),
+                pos: SourcePosition::default()
+            })
+        );
+
+        assert_eq!(
+            result_2,
+            Ok(Token {
+                kind: TokenType::FloatValue(0.32),
                 pos: SourcePosition::default()
             })
         );
