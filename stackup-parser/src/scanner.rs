@@ -156,7 +156,7 @@ where
     let digits = repeat::many::<String, _>(digit());
     let non_zero_digit = satisfy(|c: char| c.is_digit(10) && c != '0').expected("non-zero digit");
     (
-        optional(token('-')).map(|sign| sign.unwrap_or('+')),
+        optional(token('-').or(token('+'))).map(|sign| sign.unwrap_or('+')),
         range::range("0").or(recognize((non_zero_digit, digits))),
     )
         .map(|(sign, n): (char, &str)| {
@@ -178,6 +178,7 @@ mod test {
         let result = parser.parse(State::new("12345")).map(|x| x.0);
         let result_0 = parser.parse(State::new("0")).map(|x| x.0);
         let result_negative = parser.parse(State::new("-12345")).map(|x| x.0);
+        let result_positive = parser.parse(State::new("+12345")).map(|x| x.0);
         let result_err = parser.parse(State::new("name")).map(|x| x.0);
 
         assert_eq!(
@@ -200,6 +201,14 @@ mod test {
             result_negative,
             Ok(Token {
                 kind: TokenType::IntValue(-12345),
+                pos: SourcePosition::default()
+            })
+        );
+
+        assert_eq!(
+            result_positive,
+            Ok(Token {
+                kind: TokenType::IntValue(12345),
                 pos: SourcePosition::default()
             })
         );
