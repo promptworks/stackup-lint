@@ -6,6 +6,9 @@ use combine::parser::repeat;
 use combine::stream::{state::SourcePosition, RangeStream};
 use combine::{self, choice, optional, position, token, Parser};
 
+/// Lexical grammar can be found here
+/// https://github.com/graphql/graphql-spec/blob/master/spec/Appendix%20B%20--%20Grammar%20Summary.md
+
 #[derive(Debug, Clone, PartialEq)]
 enum TokenType<'a> {
     Punctuator(Punctuator),
