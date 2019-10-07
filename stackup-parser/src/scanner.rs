@@ -1,5 +1,5 @@
 use combine::error::ParseError;
-use combine::parser::char::digit;
+use combine::parser::char::{alpha_num, digit};
 use combine::parser::item::satisfy;
 use combine::parser::range::{self, recognize};
 use combine::parser::repeat;
@@ -160,9 +160,62 @@ where
     ))
 }
 
+fn double_quote_string<'a, I>() -> impl Parser<Input = I, Output = &'a str>
+where
+    I: RangeStream<Item = char, Range = &'a str, Position = SourcePosition>,
+    I::Error: ParseError<I::Item, I::Range, I::Position>,
+{
+    (
+        token('\"'),
+        recognize(repeat::skip_many(string_character())),
+        token('\"').message("unterminated string"),
+    )
+        .map(|(_, value, _)| value)
+}
+
+fn string_character<'a, I>() -> impl Parser<Input = I, Output = &'a str>
+where
+    I: RangeStream<Item = char, Range = &'a str, Position = SourcePosition>,
+    I::Error: ParseError<I::Item, I::Range, I::Position>,
+{
+    let escaped_character = satisfy(|c: char| {
+        c == '\"'
+            || c == '\\'
+            || c == '/'
+            || c == 'b'
+            || c == 'f'
+            || c == 'n'
+            || c == 'r'
+            || c == 't'
+    })
+    .map(|_| ());
+
+    let unicode_sequence = (
+        token('u'),
+        alpha_num(),
+        alpha_num(),
+        alpha_num(),
+        alpha_num(),
+    )
+        .map(|_| ());
+
+    let source_character_string =
+        satisfy(|c: char| is_source_character(c) && c != '\"' && c != '\n');
+
+    choice((
+        recognize(token('\\').and(unicode_sequence.or(escaped_character))),
+        recognize(source_character_string),
+    ))
+}
+
+fn is_source_character(c: char) -> bool {
+    c == '\u{0009}' || c == '\u{000A}' || c == '\u{000D}' || (c >= '\u{0020}' && c <= '\u{FFFF}')
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+    use combine::stream::easy::{Error, Errors};
     use combine::stream::state::State;
 
     #[test]
@@ -303,5 +356,58 @@ mod test {
         );
 
         assert!(result_err.is_err());
+    }
+
+    #[test]
+    fn test_double_quote_string() {
+        let mut parser = double_quote_string();
+        let result = parser.parse(State::new("\"...\"")).map(|x| x.0);
+        let result_1 = parser.parse(State::new("\"12345\"")).map(|x| x.0);
+        let result_2 = parser.parse(State::new("\"Valid string\"")).map(|x| x.0);
+        let result_escape_sequence = parser
+            .parse(State::new("\"Test escapes \\t \\f\""))
+            .map(|x| x.0);
+        let result_err = double_quote_string()
+            .easy_parse(State::new("\"missing ending quote"))
+            .map(|x| x.0);
+
+        let result_err_2 = double_quote_string()
+            .easy_parse(State::new(
+                "\"newline
+            error",
+            ))
+            .map(|x| x.0);
+
+        assert_eq!(result, Ok("..."));
+        assert_eq!(result_1, Ok("12345"));
+        assert_eq!(result_2, Ok("Valid string"));
+        assert_eq!(result_escape_sequence, Ok("Test escapes \\t \\f"));
+
+        assert_eq!(
+            result_err,
+            Err(Errors {
+                position: SourcePosition {
+                    line: 1,
+                    column: 22
+                },
+                errors: vec![
+                    Error::Unexpected("end of input".into()),
+                    Error::Expected('\"'.into()),
+                    Error::Message("unterminated string".into())
+                ]
+            })
+        );
+
+        assert_eq!(
+            result_err_2,
+            Err(Errors {
+                position: SourcePosition { line: 1, column: 9 },
+                errors: vec![
+                    Error::Unexpected('\n'.into()),
+                    Error::Expected('\"'.into()),
+                    Error::Message("unterminated string".into())
+                ]
+            })
+        );
     }
 }
