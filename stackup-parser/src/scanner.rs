@@ -127,6 +127,16 @@ where
         .map(|(pos, num)| Token::new(TokenType::IntValue(num.parse().unwrap()), pos))
 }
 
+// TODO: Block strings
+fn string_value<'a, I>() -> impl Parser<Input = I, Output = Token<'a>>
+where
+    I: RangeStream<Item = char, Range = &'a str, Position = SourcePosition>,
+    I::Error: ParseError<I::Item, I::Range, I::Position>,
+{
+    (position(), double_quote_string())
+        .map(|(pos, str_literal)| Token::new(TokenType::StringValue(str_literal), pos))
+}
+
 // TODO: Add exponent parts
 fn float_value<'a, I>() -> impl Parser<Input = I, Output = Token<'a>>
 where
