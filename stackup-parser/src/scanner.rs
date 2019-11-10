@@ -3,14 +3,16 @@ use combine::parser::char::{alpha_num, digit};
 use combine::parser::item::satisfy;
 use combine::parser::range::{self, recognize};
 use combine::parser::repeat;
-use combine::stream::{state::SourcePosition, RangeStream};
+use combine::stream::easy::ParseError as EasyParseError;
+use combine::stream::state::{SourcePosition, State};
+use combine::stream::RangeStream;
 use combine::{self, choice, optional, position, token, Parser};
 
 /// Lexical grammar can be found here
 /// https://github.com/graphql/graphql-spec/blob/master/spec/Appendix%20B%20--%20Grammar%20Summary.md
 
 #[derive(Debug, Clone, PartialEq)]
-enum TokenType<'a> {
+pub enum TokenType<'a> {
     Punctuator(Punctuator),
     Name(&'a str),
     IntValue(i32),
@@ -19,7 +21,7 @@ enum TokenType<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-enum Punctuator {
+pub enum Punctuator {
     Bang,
     DollarSign,
     Ampersand,
@@ -37,15 +39,34 @@ enum Punctuator {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct Token<'a> {
-    kind: TokenType<'a>,
-    pos: SourcePosition,
+pub struct Token<'a> {
+    pub kind: TokenType<'a>,
+    pub pos: SourcePosition,
 }
 
 impl<'a> Token<'a> {
     pub fn new(kind: TokenType<'a>, pos: SourcePosition) -> Token<'a> {
         Self { kind, pos }
     }
+}
+
+pub(crate) fn parse(s: &str) -> Result<Vec<Token>, EasyParseError<State<&str, SourcePosition>>> {
+    let input = State::new(s);
+    tokens().easy_parse(input).map(|(tokens, _)| tokens)
+}
+
+fn tokens<'a, I>() -> impl Parser<Input = I, Output = Vec<Token<'a>>>
+where
+    I: RangeStream<Item = char, Range = &'a str, Position = SourcePosition>,
+    I::Error: ParseError<I::Item, I::Range, I::Position>,
+{
+    repeat::many(choice((
+        punctuator(),
+        name(),
+        int_value(),
+        float_value(),
+        string_value(),
+    )))
 }
 
 fn punctuator<'a, I>() -> impl Parser<Input = I, Output = Token<'a>>
