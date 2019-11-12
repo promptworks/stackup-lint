@@ -1,5 +1,5 @@
 use combine::error::ParseError;
-use combine::parser::char::{alpha_num, digit};
+use combine::parser::char::{alpha_num, digit, spaces};
 use combine::parser::item::satisfy;
 use combine::parser::range::{self, recognize};
 use combine::parser::repeat;
@@ -60,13 +60,16 @@ where
     I: RangeStream<Item = char, Range = &'a str, Position = SourcePosition>,
     I::Error: ParseError<I::Item, I::Range, I::Position>,
 {
-    repeat::many(choice((
-        punctuator(),
-        name(),
-        int_value(),
-        float_value(),
-        string_value(),
-    )))
+    combine::sep_by(
+        choice((
+            punctuator(),
+            name(),
+            int_value(),
+            float_value(),
+            string_value(),
+        )),
+        spaces(),
+    )
 }
 
 fn punctuator<'a, I>() -> impl Parser<Input = I, Output = Token<'a>>
@@ -440,5 +443,723 @@ mod test {
                 ]
             })
         );
+    }
+
+    #[test]
+    fn test_parse() {
+        let schema = include_str!("../../tests/stackup-example.graphql");
+
+        assert_eq!(
+            parse(schema),
+            Ok(vec![
+                Token {
+                    kind: TokenType::Name("type"),
+                    pos: SourcePosition { line: 1, column: 1 }
+                },
+                Token {
+                    kind: TokenType::Name("User"),
+                    pos: SourcePosition { line: 1, column: 6 }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::AtSign),
+                    pos: SourcePosition {
+                        line: 1,
+                        column: 11
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("authenticate"),
+                    pos: SourcePosition {
+                        line: 1,
+                        column: 12
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::LeftCurlyBracket),
+                    pos: SourcePosition {
+                        line: 1,
+                        column: 25
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("id"),
+                    pos: SourcePosition { line: 2, column: 3 }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Colon),
+                    pos: SourcePosition { line: 2, column: 5 }
+                },
+                Token {
+                    kind: TokenType::Name("ID"),
+                    pos: SourcePosition { line: 2, column: 7 }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Bang),
+                    pos: SourcePosition { line: 2, column: 9 }
+                },
+                Token {
+                    kind: TokenType::Name("email"),
+                    pos: SourcePosition { line: 3, column: 3 }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Colon),
+                    pos: SourcePosition { line: 3, column: 8 }
+                },
+                Token {
+                    kind: TokenType::Name("String"),
+                    pos: SourcePosition {
+                        line: 3,
+                        column: 10
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Bang),
+                    pos: SourcePosition {
+                        line: 3,
+                        column: 16
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::AtSign),
+                    pos: SourcePosition {
+                        line: 3,
+                        column: 18
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("unique"),
+                    pos: SourcePosition {
+                        line: 3,
+                        column: 19
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::RightCurlyBracket),
+                    pos: SourcePosition { line: 4, column: 1 }
+                },
+                Token {
+                    kind: TokenType::Name("enum"),
+                    pos: SourcePosition { line: 6, column: 1 }
+                },
+                Token {
+                    kind: TokenType::Name("Genre"),
+                    pos: SourcePosition { line: 6, column: 6 }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::LeftCurlyBracket),
+                    pos: SourcePosition {
+                        line: 6,
+                        column: 12
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("FICTION"),
+                    pos: SourcePosition { line: 7, column: 3 }
+                },
+                Token {
+                    kind: TokenType::Name("NONFICTION"),
+                    pos: SourcePosition { line: 8, column: 3 }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::RightCurlyBracket),
+                    pos: SourcePosition { line: 9, column: 1 }
+                },
+                Token {
+                    kind: TokenType::Name("type"),
+                    pos: SourcePosition {
+                        line: 11,
+                        column: 1
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("Book"),
+                    pos: SourcePosition {
+                        line: 11,
+                        column: 6
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::LeftCurlyBracket),
+                    pos: SourcePosition {
+                        line: 11,
+                        column: 11
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("id"),
+                    pos: SourcePosition {
+                        line: 12,
+                        column: 3
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Colon),
+                    pos: SourcePosition {
+                        line: 12,
+                        column: 5
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("ID"),
+                    pos: SourcePosition {
+                        line: 12,
+                        column: 7
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Bang),
+                    pos: SourcePosition {
+                        line: 12,
+                        column: 9
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("title"),
+                    pos: SourcePosition {
+                        line: 13,
+                        column: 3
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Colon),
+                    pos: SourcePosition {
+                        line: 13,
+                        column: 8
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("String"),
+                    pos: SourcePosition {
+                        line: 13,
+                        column: 10
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Bang),
+                    pos: SourcePosition {
+                        line: 13,
+                        column: 16
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("genre"),
+                    pos: SourcePosition {
+                        line: 14,
+                        column: 3
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Colon),
+                    pos: SourcePosition {
+                        line: 14,
+                        column: 8
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("Genre"),
+                    pos: SourcePosition {
+                        line: 14,
+                        column: 10
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Bang),
+                    pos: SourcePosition {
+                        line: 14,
+                        column: 15
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::AtSign),
+                    pos: SourcePosition {
+                        line: 14,
+                        column: 17
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("column"),
+                    pos: SourcePosition {
+                        line: 14,
+                        column: 18
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::LeftParen),
+                    pos: SourcePosition {
+                        line: 14,
+                        column: 24
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("default"),
+                    pos: SourcePosition {
+                        line: 14,
+                        column: 25
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Colon),
+                    pos: SourcePosition {
+                        line: 14,
+                        column: 32
+                    }
+                },
+                Token {
+                    kind: TokenType::StringValue("NONFICTION"),
+                    pos: SourcePosition {
+                        line: 14,
+                        column: 34
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::RightParen),
+                    pos: SourcePosition {
+                        line: 14,
+                        column: 46
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("author"),
+                    pos: SourcePosition {
+                        line: 15,
+                        column: 3
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Colon),
+                    pos: SourcePosition {
+                        line: 15,
+                        column: 9
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("Author"),
+                    pos: SourcePosition {
+                        line: 15,
+                        column: 11
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Bang),
+                    pos: SourcePosition {
+                        line: 15,
+                        column: 17
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::AtSign),
+                    pos: SourcePosition {
+                        line: 15,
+                        column: 19
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("belongsTo"),
+                    pos: SourcePosition {
+                        line: 15,
+                        column: 20
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::RightCurlyBracket),
+                    pos: SourcePosition {
+                        line: 16,
+                        column: 1
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("type"),
+                    pos: SourcePosition {
+                        line: 18,
+                        column: 1
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("Author"),
+                    pos: SourcePosition {
+                        line: 18,
+                        column: 6
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::LeftCurlyBracket),
+                    pos: SourcePosition {
+                        line: 18,
+                        column: 13
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("id"),
+                    pos: SourcePosition {
+                        line: 19,
+                        column: 3
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Colon),
+                    pos: SourcePosition {
+                        line: 19,
+                        column: 5
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("ID"),
+                    pos: SourcePosition {
+                        line: 19,
+                        column: 7
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Bang),
+                    pos: SourcePosition {
+                        line: 19,
+                        column: 9
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("name"),
+                    pos: SourcePosition {
+                        line: 20,
+                        column: 3
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Colon),
+                    pos: SourcePosition {
+                        line: 20,
+                        column: 7
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("String"),
+                    pos: SourcePosition {
+                        line: 20,
+                        column: 9
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Bang),
+                    pos: SourcePosition {
+                        line: 20,
+                        column: 15
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("books"),
+                    pos: SourcePosition {
+                        line: 21,
+                        column: 3
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Colon),
+                    pos: SourcePosition {
+                        line: 21,
+                        column: 8
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::LeftSquareBracket),
+                    pos: SourcePosition {
+                        line: 21,
+                        column: 10
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("Book"),
+                    pos: SourcePosition {
+                        line: 21,
+                        column: 11
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Bang),
+                    pos: SourcePosition {
+                        line: 21,
+                        column: 15
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::RightSquareBracket),
+                    pos: SourcePosition {
+                        line: 21,
+                        column: 16
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Bang),
+                    pos: SourcePosition {
+                        line: 21,
+                        column: 17
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::RightCurlyBracket),
+                    pos: SourcePosition {
+                        line: 22,
+                        column: 1
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("type"),
+                    pos: SourcePosition {
+                        line: 24,
+                        column: 1
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("Widget"),
+                    pos: SourcePosition {
+                        line: 24,
+                        column: 6
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::LeftCurlyBracket),
+                    pos: SourcePosition {
+                        line: 24,
+                        column: 13
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("id"),
+                    pos: SourcePosition {
+                        line: 25,
+                        column: 3
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Colon),
+                    pos: SourcePosition {
+                        line: 25,
+                        column: 5
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("ID"),
+                    pos: SourcePosition {
+                        line: 25,
+                        column: 7
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Bang),
+                    pos: SourcePosition {
+                        line: 25,
+                        column: 9
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("string"),
+                    pos: SourcePosition {
+                        line: 26,
+                        column: 3
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Colon),
+                    pos: SourcePosition {
+                        line: 26,
+                        column: 9
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("String"),
+                    pos: SourcePosition {
+                        line: 26,
+                        column: 11
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Bang),
+                    pos: SourcePosition {
+                        line: 26,
+                        column: 17
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("date"),
+                    pos: SourcePosition {
+                        line: 27,
+                        column: 3
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Colon),
+                    pos: SourcePosition {
+                        line: 27,
+                        column: 7
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("Date"),
+                    pos: SourcePosition {
+                        line: 27,
+                        column: 9
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Bang),
+                    pos: SourcePosition {
+                        line: 27,
+                        column: 13
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("datetime"),
+                    pos: SourcePosition {
+                        line: 28,
+                        column: 3
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Colon),
+                    pos: SourcePosition {
+                        line: 28,
+                        column: 11
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("DateTime"),
+                    pos: SourcePosition {
+                        line: 28,
+                        column: 13
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Bang),
+                    pos: SourcePosition {
+                        line: 28,
+                        column: 21
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("integer"),
+                    pos: SourcePosition {
+                        line: 29,
+                        column: 3
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Colon),
+                    pos: SourcePosition {
+                        line: 29,
+                        column: 10
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("Int"),
+                    pos: SourcePosition {
+                        line: 29,
+                        column: 12
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Bang),
+                    pos: SourcePosition {
+                        line: 29,
+                        column: 15
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("float"),
+                    pos: SourcePosition {
+                        line: 30,
+                        column: 3
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Colon),
+                    pos: SourcePosition {
+                        line: 30,
+                        column: 8
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("Float"),
+                    pos: SourcePosition {
+                        line: 30,
+                        column: 10
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Bang),
+                    pos: SourcePosition {
+                        line: 30,
+                        column: 15
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("decimal"),
+                    pos: SourcePosition {
+                        line: 31,
+                        column: 3
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Colon),
+                    pos: SourcePosition {
+                        line: 31,
+                        column: 10
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("Decimal"),
+                    pos: SourcePosition {
+                        line: 31,
+                        column: 12
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Bang),
+                    pos: SourcePosition {
+                        line: 31,
+                        column: 19
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::AtSign),
+                    pos: SourcePosition {
+                        line: 31,
+                        column: 21
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("column"),
+                    pos: SourcePosition {
+                        line: 31,
+                        column: 22
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::LeftParen),
+                    pos: SourcePosition {
+                        line: 31,
+                        column: 28
+                    }
+                },
+                Token {
+                    kind: TokenType::Name("precision"),
+                    pos: SourcePosition {
+                        line: 31,
+                        column: 29
+                    }
+                },
+                Token {
+                    kind: TokenType::Punctuator(Punctuator::Colon),
+                    pos: SourcePosition {
+                        line: 31,
+                        column: 38
+                    }
+                },
+                Token {
+                    kind: TokenType::IntValue(10),
+                    pos: SourcePosition {
+                        line: 31,
+                        column: 40
+                    }
+                }
+            ])
+        )
     }
 }
